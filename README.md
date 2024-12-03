@@ -1,0 +1,1 @@
+# ExternalAdapter_API
