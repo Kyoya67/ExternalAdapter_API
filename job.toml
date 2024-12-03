@@ -1,0 +1,51 @@
+type = "directrequest"
+schemaVersion = 1
+name = "Get Earthquake Data"
+externalJobID = "8d06afe8-7042-49cc-b73c-f70e451d2121"
+forwardingAllowed = false
+maxTaskDuration = "0s"
+contractAddress = "0xdFb5B34AEB957CfC7f6e4812019124a1AAe43F3a"
+minContractPaymentLinkJuels = "0"
+observationSource = """
+  decode_log [
+    type="ethabidecodelog"
+    abi="OracleRequest(bytes32 indexed specId, address requester, bytes32 requestId, uint256 payment, address callbackAddr, bytes4 callbackFunctionId, uint256 cancelExpiration, uint256 dataVersion, bytes data)"
+    data="$(jobRun.logData)"
+    topics="$(jobRun.logTopics)"
+  ]
+  decode_cbor [type=cborparse data="$(decode_log.data)"]
+  fetch [
+    type="bridge"
+    name="earthquake_bridge"
+    requestData="{\\"id\\": $(jobSpec.externalJobID)}"
+  ]
+
+  decode_log -> decode_cbor -> fetch
+
+  data_date [type="jsonparse" path="data,summary,date" data="$(fetch)"]
+  date_affected_prefectures [type="jsonparse" path="data,summary,affectedPrefectures" data="$(fetch)"]
+
+  fetch -> data_date
+  fetch -> date_affected_prefectures
+
+  encode_data [
+  type="ethabiencode"
+  abi="(bytes32 requestId, string date, uint256 affectedPrefectures)"
+  data="{\\"requestId\\": $(decode_log.requestId), \\"date\\": $(data_date), \\"affectedPrefectures\\": $(date_affected_prefectures)}"
+]
+  
+  data_date -> encode_data
+  date_affected_prefectures -> encode_data
+  
+  encode_tx [
+    type="ethabiencode"
+    abi="fulfillOracleRequest2(bytes32 requestId, uint256 payment, address callbackAddress, bytes4 callbackFunctionId, uint256 expiration, bytes calldata data)"
+    data="{\\"requestId\\": $(decode_log.requestId), \\"payment\\": $(decode_log.payment), \\"callbackAddress\\": $(decode_log.callbackAddr), \\"callbackFunctionId\\": $(decode_log.callbackFunctionId), \\"expiration\\": $(decode_log.cancelExpiration), \\"data\\": $(encode_data)}"
+  ]
+  submit_tx [
+    type="ethtx" to="0xdFb5B34AEB957CfC7f6e4812019124a1AAe43F3a"
+    data="$(encode_tx)"
+  ]
+
+  encode_data -> encode_tx -> submit_tx
+"""
