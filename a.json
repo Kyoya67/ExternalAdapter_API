@@ -1,0 +1,22 @@
+{
+    "jobRunID": "1",
+    "data": {
+        "summary": {
+            "date": "20241130",
+            "affectedPrefectures": 2
+        },
+        "prefectures": [
+            {
+                "prefCode": "3",
+                "maxScale": "1",
+                "quakeScore": 1
+            },
+            {
+                "prefCode": "43",
+                "maxScale": "1",
+                "quakeScore": 1
+            }
+        ]
+    },
+    "statusCode": 200
+}
